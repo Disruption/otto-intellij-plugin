@@ -1,13 +1,19 @@
 package com.squareup.ideaplugin.otto;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.project.ProjectUtil;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
  * Encapsulates all of the metadata for a particular kind of subscriber method
@@ -16,15 +22,18 @@ import org.jetbrains.annotations.Nullable;
  */
 public class SubscriberMetadata {
 
-  private static final ImmutableSet<SubscriberMetadata> subscribers = ImmutableSet.of(
-      new SubscriberMetadata("com.squareup.otto.Subscribe", "com.squareup.otto.Bus", "com.squareup.otto.Produce",
-          PickAction.Type.PRODUCER, PickAction.Type.EVENT_POST),
+  private static String customBusClass = PropertiesComponent.getInstance(ProjectUtil.guessCurrentProject(null)).getValue(BusClassConfigurable.STORED_CLASS_KEY);
+  private static ImmutableSet<SubscriberMetadata> subscribers = generateSubscribers();
 
-      new SubscriberMetadata("com.google.common.eventbus.Subscribe", "com.google.common.eventbus.EventBus", null,
-          PickAction.Type.EVENT_POST)
-  );
+  public static void setCustomBusClass(String customBusClass) {
+    SubscriberMetadata.customBusClass = customBusClass;
+    subscribers = generateSubscribers();
+  }
 
   public static ImmutableSet<SubscriberMetadata> getAllSubscribers() {
+    if (subscribers == null) {
+        subscribers = generateSubscribers();
+    }
     return subscribers;
   }
 
@@ -122,4 +131,20 @@ public class SubscriberMetadata {
     }
     return null;
   }
+
+  private static ImmutableSet<SubscriberMetadata> generateSubscribers(){
+    List<SubscriberMetadata> subscriberMetadataList = Lists.newArrayList(
+      new SubscriberMetadata("com.squareup.otto.Subscribe", "com.squareup.otto.Bus", "com.squareup.otto.Produce",
+              PickAction.Type.PRODUCER, PickAction.Type.EVENT_POST),
+
+      new SubscriberMetadata("com.google.common.eventbus.Subscribe", "com.google.common.eventbus.EventBus", null,
+              PickAction.Type.EVENT_POST));
+
+      if (customBusClass != null) {
+        subscriberMetadataList.add(new SubscriberMetadata("com.squareup.otto.Subscribe", customBusClass, "com.squareup.otto.Produce",
+                                           PickAction.Type.PRODUCER, PickAction.Type.EVENT_POST));
+      }
+
+      return ImmutableSet.copyOf(subscriberMetadataList);
+    }
 }

@@ -23,7 +23,6 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction;
 import com.intellij.featureStatistics.FeatureUsageTracker;
 import com.intellij.find.FindBundle;
 import com.intellij.find.FindManager;
-import com.intellij.find.FindSettings;
 import com.intellij.find.actions.FindUsagesInFileAction;
 import com.intellij.find.actions.UsageListCellRenderer;
 import com.intellij.find.findUsages.AbstractFindUsagesDialog;
@@ -417,7 +416,7 @@ public class ShowUsagesAction extends AnAction implements PopupAction {
       }
     };
 
-    final ProgressIndicator indicator = FindUsagesManager.startProcessUsages(handler, handler.getPrimaryElements(), handler.getSecondaryElements(), collect, options, new Runnable() {
+    final ProgressIndicator indicator = FindUsagesManager.startProcessUsages(handler, descriptor, collect, options, new Runnable() {
       @Override
       public void run() {
         ApplicationManager.getApplication().invokeLater(new Runnable() {
@@ -746,9 +745,12 @@ public class ShowUsagesAction extends AnAction implements PopupAction {
         hideHints();
         popup[0].cancel();
         FindUsagesManager findUsagesManager = ((FindManagerImpl)FindManager.getInstance(usageView.getProject())).getFindUsagesManager();
+        FindUsagesManager.SearchData data = new FindUsagesManager.SearchData();
+        data.myOptions = options;
+        List<SmartPsiElementPointer<PsiElement>> plist = descriptor.getAllElementPointers();
 
-        findUsagesManager.findUsages(handler.getPrimaryElements(), handler.getSecondaryElements(), handler, options,
-                  FindSettings.getInstance().isSkipResultsWithOneUsage());
+        data.myElements = plist.toArray(new SmartPsiElementPointer[plist.size()]);
+        findUsagesManager.rerunAndRecallFromHistory(data);
       }
     });
 
